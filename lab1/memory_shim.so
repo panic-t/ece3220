@@ -1,0 +1,10 @@
+#include <dlfcn.h>
+
+
+
+
+void *(*orig_malloc) (size_t size);
+void *(*orig_free) (void *ptr);
+
+orig_malloc = dlsym(RTLD_NEXT, "malloc");
+orig_free = dlsym(RTLD_NEXT, "free");
