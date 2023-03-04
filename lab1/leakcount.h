@@ -1,9 +1,10 @@
 
 
-typedef struct avl_node_tag {
+typedef struct stack_node_tag {
     void *key;
-    size_t size;
-    struct avl_node_tag *left, *right;
-    int lheight, rheight;
-} avl_node;
+    int size;
+    struct stack_node_tag *link;
+} stack_node;
 
+void wrapup();
+int main(int argc, char const *argv[]);

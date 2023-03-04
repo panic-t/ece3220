@@ -12,6 +12,7 @@ void *(*orig_malloc)(size_t size) = NULL;
 void (*orig_free)(void *ptr) = NULL;
 
 void *malloc(size_t size) {
+    printf("malloc shim\n");
     if(orig_malloc == NULL)
         orig_malloc = dlsym(RTLD_NEXT, "malloc");
     void *ret = (*orig_malloc)(size);
@@ -28,6 +29,7 @@ void *malloc(size_t size) {
 }
 
 void free(void *ptr) {
+    printf("free shim\n");
     if(orig_free == NULL)
         orig_free = dlsym(RTLD_NEXT, "free");
     (*orig_free)(ptr);
