@@ -14,6 +14,9 @@ libmythreads.a: mythreads.c mythreads.h queue.c threadwrapper.c
 tar: mythreads.c mythreads.h queue.c threadwrapper.c
 	tar cvzf project2.tgz makefile mythreads.c mythreads.h queue.c queue.h threadwrapper.c threadwrapper.h
 
+test: tester.c libmythreads.a 
+	$(CC) $(CFLAGS) -o test tester.c libmythreads.a
+
 clean:
 	$(RM) $(BINS)
 	$(RM) -r *.dSYM

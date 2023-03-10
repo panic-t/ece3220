@@ -1,3 +1,8 @@
+/* <ryan ware>
+ece3220 s2023
+would you believe they're actually stacks?
+*/
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <ucontext.h>
@@ -11,24 +16,18 @@ int currentID = -2;
 int qpush(ucontext_t *newContext, queue *q) {
     if(q==NULL)
         return INVALID;
-    if(q->size==0) {
-        q->head = (qnode *)malloc(sizeof(qnode));
-        q->head->key = currentID--;
-        q->head->thread = newContext;
-        q->head->link = NULL;
-        q->head->waiting = -1;
+    qnode *held = q->head;
+    q->head = (qnode *)malloc(sizeof(qnode));
+    q->head = (qnode *)malloc(sizeof(qnode));
+    q->head->key = currentID--;
+    q->head->thread = newContext;
+    q->head->link = held;
+    q->head->waiting = -1;
+    q->head->sig = -1;
+    if(q->size==0)
         q->tail = q->head;
-        q->size++;
-        return q->head->key;
-    }
-    q->tail->link = (qnode *)malloc(sizeof(qnode));
-    q->tail = q->tail->link;
-    q->tail->key = currentID++;
-    q->tail->waiting = -1;
-    q->tail->thread = newContext;
-    q->tail->link = NULL;
     q->size++;
-    return q->tail->key;
+    return q->head->key;
 }
 
 
@@ -38,6 +37,8 @@ int qfront(qnode *node, queue *q) {
         return INVALID;
     node->link = q->head;
     q->head = node;
+    if(q->size==0)
+        q->tail = node;
     q->size++;
     return node->key;
 }
@@ -53,7 +54,7 @@ qnode *qrotate(queue *q) {
     return q->tail;
 }
 
-//pops off top block, returns ptr to node, return NULL on NULL/empty queue
+//pops off top block, returns ptr to node, return NULL on NULL/empty queue; DEPRECATED
 qnode *qpop(queue *q) {
     if(q==NULL||q->size==0)
         return NULL;
@@ -77,19 +78,12 @@ qnode *qfind(int search, queue *q) {
         return NULL;
 }
 
-//finds current running thread qith qmatch()
-qnode *qcurrent(queue *q) {
-    ucontext_t current;
-    getcontext(&current);
-    return qmatch(&current, q);
-}
-
 //same as qfind(), but searches wait values
-qnode *qwaitfind(int search, queue *q) {
+qnode *qwaitfind(int search, int signal, queue *q) {
     if(q==NULL)
         return NULL;
     qnode *slider;
-    for(slider=q->head;slider!=NULL&&slider->waiting!=search;slider=slider->link);
+    for(slider=q->head;slider!=NULL&&(slider->waiting!=search||slider->sig!=signal);slider=slider->link);
     if(slider!=NULL)
         return slider;
     else
@@ -116,7 +110,18 @@ int qremove(qnode *target, queue *q) {
         return INVALID;
     if(target==NULL||q==NULL||qfind(target->key, q)==NULL)
         return INVALID;
+    if(q->size==1) {
+        q->head = NULL;
+        q->tail = NULL;
+        q->size = 0;
+        return target->key;
+    }
     qnode *prev, *ret;
+    if(target==q->head) {
+        q->head = q->head->link;
+        q->size--;
+        return target->key;
+    }
     for(prev=q->head; prev->link!=target; prev=prev->link);
     ret = prev->link;
     prev->link = ret->link;
@@ -125,6 +130,7 @@ int qremove(qnode *target, queue *q) {
         while(q->tail->link!=NULL)
             q->tail = q->tail->link;
     }
+    target->link = NULL;
     q->size--;
     return ret->key;
 }
@@ -133,12 +139,20 @@ int qremove(qnode *target, queue *q) {
 int qadd(qnode *node, queue *q) {
     if(node==NULL||q==NULL)
         return INVALID;
+    if(q->size==0) {
+        q->head = node;
+        q->tail = node;
+        q->size = 1;
+        return node->key;
+    }
     q->tail->link = node;
+    q->tail = q->tail->link;
+    node->link = NULL;
     q->size++;
     return node->key;
 }
 
-//deletes node from queue, frees it, returns thread context
+//deletes node from queue, frees it, returns thread context; DEPRECATED
 ucontext_t *qdelete(qnode *target, queue *q) {
     if(target==NULL||q->size==0||qfind(target->key, q)==NULL)
         return NULL;
@@ -190,8 +204,21 @@ int getWait(qnode *target) {
     return target->waiting;
 }
 
+void setSig(qnode *target, int signal) {
+    if(target==NULL)
+        return;
+    target->sig = signal;
+    return;
+}
+
+int getSig(qnode *target) {
+    if(target==NULL)
+        return INVALID;
+    return target->sig;
+}
+
 //lockon(), lockoff(), and findlock() are for accessing lock array, should
-//return lock holder id or INVALID if wrong (findlock returns signal)
+//return lock holder id or INVALID if wrong 
 int lockon(int locknum, int holdid, int signal, lockqueue *q) {
     if(q==NULL)
         return INVALID;
@@ -209,18 +236,18 @@ int lockon(int locknum, int holdid, int signal, lockqueue *q) {
     q->size++;
     return holdid;
 }
-int findlock(int locknum, lockqueue *q) {
+int findlock(int locknum, int signal, lockqueue *q) {
     if(q==NULL)
         return INVALID;
     lockqnode *slider;
-    for(slider=q->head; slider!=NULL&&slider->lock!=locknum; slider=slider->link);
+    for(slider=q->head; slider!=NULL&&(slider->lock!=locknum||slider->sig!=signal); slider=slider->link);
     if(slider==NULL)
         return INVALID;
-    return slider->sig;
+    return slider->holder;
 }
-int lockoff(int locknum, lockqueue *q) {
+int lockoff(int locknum, int signal, lockqueue *q) {
     int ret;
-    if(findlock(locknum, q)==INVALID)
+    if(findlock(locknum, signal, q)==INVALID)
         return INVALID;
     if(q->size==1) {
         ret = q->head->holder;
@@ -231,6 +258,14 @@ int lockoff(int locknum, lockqueue *q) {
         return ret;
     }
     lockqnode *prev;
+    if(q->head->lock==locknum&&q->head->sig==signal) {
+        prev = q->head;
+        q->head = q->head->link;
+        ret = prev->holder;
+        free(prev);
+        q->size--;
+        return ret;
+    }
     for(prev=q->head; prev!=NULL&&prev->link->lock!=locknum; prev=prev->link);
     if(q->tail==prev->link)
         q->tail = prev;
