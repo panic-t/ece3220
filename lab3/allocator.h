@@ -15,23 +15,22 @@ custom data metablock - always 0x000A (2B)
 will have page block immediately preceding
 
 page metablock - ([size_t]+2[void *]B)
-next page in list 
+next page in list, prev page in list
 
 */
 
 typedef struct data_metablock_tag {
-    int free : 1;
-    int index : 11;
-    int size : 4;
+    unsigned int index : 12;
+    unsigned int size : 4;
 } dmeta_t;
 
-struct  interior_data_tag{
-    int free_count: 16;
-    int next_free: 16;
+struct interior_data_tag{
+    uint16_t free_count;
+    uint16_t next_free;
 };
 
 typedef struct page_metablock_tag {
-    void *next, *prev;
+    struct page_metablock_tag *next, *prev;
     union {
         struct interior_data_tag ncus_data;
         size_t cus_size;
