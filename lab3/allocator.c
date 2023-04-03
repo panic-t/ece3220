@@ -7,6 +7,7 @@ allocator.c
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdint.h>
+#include <string.h>
 #include <fcntl.h>
 #include <sys/mman.h>
 #include "allocator.h"
@@ -78,7 +79,7 @@ MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
             //new page should be fully initialized
             phold = (char *)heads[scode];
         }
-        lasts[scode] = phold;
+        lasts[scode] = (pmeta_t *)phold;
     } else {
         phold = (char *)lasts[scode];
     }

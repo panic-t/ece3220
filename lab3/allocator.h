@@ -36,3 +36,10 @@ typedef struct page_metablock_tag {
         size_t cus_size;
     } data;
 } pmeta_t;
+
+void *malloc(size_t size);
+void *calloc(size_t n, size_t size);
+void *realloc(void *ptr, size_t size);
+void free(void *ptr);
+size_t real_size(void *ptr);
+size_t dec_size(int scode);
