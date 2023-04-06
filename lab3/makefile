@@ -2,9 +2,12 @@ CC=clang
 CFLAGS=-Wall -g
 
 BINS= libmyalloc.so
-EXTBINS= libmyalloc.so slowalloc.so
+EXTBINS= libmyalloc.so slowalloc.so test
 
 all: $(BINS)
+
+test: test.c 
+	$(CC) $(CFLAGS) test.c -o test
 
 tar: allocator.c allocator.h README makefile
 	tar cvzf project3.tgz makefile README allocator.c allocator.h

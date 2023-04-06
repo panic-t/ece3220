@@ -23,11 +23,11 @@ void *malloc(size_t size) {
     if(size<1) {
         return NULL;
     }
-    int scode = 8*sizeof(unsigned int)-__builtin_clz((unsigned int)(size-1)); //size code
+    unsigned int scode = 8*sizeof(unsigned int)-__builtin_clz((unsigned int)(size-1)); //size code
     char *phold;
-    if(scode<2)
+    if(scode<1)
         scode = 1;
-    if(scode>10)
+    if(scode>11)
         scode = 11;
     scode--;
     //scode should now be at index appropriate for size
@@ -91,13 +91,15 @@ void *realloc(void *ptr, size_t size) {
     if(ret==NULL) {
         free(ptr);
         return NULL;
-    }
-    char *data = ((char *)ptr)-sizeof(dmeta_t *);
+    } 
+    //data is a bad pointer making segfaults
+    //bad when nonc to cus
+    char *data = ((char *)ptr)-sizeof(dmeta_t);
     size_t copy_size;
-    if(((dmeta_t *)data)->size==10) {
+    if(((dmeta_t *)data)->size==10) { //customs
         data = data-sizeof(size_t);
-        copy_size = *data;
-    } else
+        copy_size = *((size_t *)data);
+    } else //noncustoms
         copy_size = 2<<(((dmeta_t *)data)->size);
     copy_size = (copy_size>=size) ? size : copy_size;
     memcpy(ret, ptr, copy_size);
@@ -110,10 +112,10 @@ void free(void *ptr) {
     if(ptr==NULL) {
         return;
     }
-    dmeta_t *block = ((dmeta_t *)ptr)-1;
+    dmeta_t *block = ((dmeta_t *)ptr)-1; //get current block
     if(block->size!=10) { //noncustoms 
         pmeta_t *page = (pmeta_t *)(((char *)block)-(sizeof(pmeta_t)+block->index*
-((2<<(block->size))+sizeof(dmeta_t))));
+((2<<(block->size))+sizeof(dmeta_t)))); //get current page
         if(page->next_free==END_FREE) { //if freeing from a full page
             if(heads[block->size]==NULL)
                 heads[block->size] = page;

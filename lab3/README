@@ -2,4 +2,19 @@
 
 This is a shim library for the malloc family of functions.
 
-This 
+The implemantation is a BiBOP with sized blocks from 2B to 1024B exponentially by powers of 2, 
+and a page size of 4KB. Allocated blocks larger than 1024B are mapped to their own custom block and page.
+The data structure has two arrays of pointers to the linked list of non-full pages allocated for each size,
+with a head and tail each. Full pages are kicked from the list and appended to the tail upon freeing any 
+block from it, and free blocks are allocated from the head. This should minimize repeated page movements
+from kicking and appending pages while keeping the whole construct in O(1). New pages are mapped and 
+formatted upon requests from a size with no available free blocks, so a NULL non-full list.
+
+The format for block pages is as follows:
+[pmeta_t (page metadata)]   [dmeta_t (block metadata)]      [void * (contains next free when freed, data)]
+{next_page, next_free_block}{index_in_page, block_size_code}{"}
+
+and, for custom pages:
+[size_t (block size)][dmeta_t (block metadata)][void * (data)]
+{"}                  {0, 10}                   {"}
+
