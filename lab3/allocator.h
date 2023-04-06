@@ -24,22 +24,14 @@ typedef struct data_metablock_tag {
     unsigned int size : 4;
 } dmeta_t;
 
-struct interior_data_tag{
-    uint16_t free_count;
-    uint16_t next_free;
-};
 
 typedef struct page_metablock_tag {
-    struct page_metablock_tag *next, *prev;
-    union {
-        struct interior_data_tag ncus_data;
-        size_t cus_size;
-    } data;
+    struct page_metablock_tag *next;
+    uint16_t next_free;
 } pmeta_t;
+
 
 void *malloc(size_t size);
 void *calloc(size_t n, size_t size);
 void *realloc(void *ptr, size_t size);
 void free(void *ptr);
-size_t real_size(void *ptr);
-size_t dec_size(int scode);

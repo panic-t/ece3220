@@ -1,13 +1,20 @@
-CC=gcc
+CC=clang
 CFLAGS=-Wall -g
 
-BINS= libmyalloc
+BINS= libmyalloc.so
+EXTBINS= libmyalloc.so slowalloc.so
 
 all: $(BINS)
 
-libmyalloc: allocator.c allocator.h
+tar: allocator.c allocator.h README makefile
+	tar cvzf project3.tgz makefile README allocator.c allocator.h
+
+slowalloc.so: allocator.c allocator.h
+	$(CC) $(CFLAGS) -shared -fPIC allocator.c -o slowalloc.so
+
+libmyalloc.so: allocator.c allocator.h
 	$(CC) $(CFLAGS) -O2 -DNDEBUG -shared -fPIC allocator.c -o libmyalloc.so
 
 clean:
-	$(RM) $(BINS)
+	$(RM) $(EXTBINS)
 	$(RM) -r *.dSYM
